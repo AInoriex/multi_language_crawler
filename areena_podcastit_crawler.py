@@ -222,4 +222,19 @@ if __name__ == "__main__":
     # 清理旧目录文件
     clean_path(DOWNLOAD_PATH)
 
-    main_pipeline(0)
+    # 单进程
+    # main_pipeline(0)
+
+    # 多进程
+    import multiprocessing
+    # PROCESS_NUM = 1 #同时处理的进程数量
+    PROCESS_NUM = int(getenv("PROCESS_NUM"))
+    try:
+        with multiprocessing.Pool(PROCESS_NUM) as pool:
+            for i in range(PROCESS_NUM):
+                pool.apply_async(main_pipeline, (i,))
+            pool.close()
+            pool.join()
+    except Exception as e:
+        logger.critical(f"[PANIC] > Exception raise: {e.__class__} | {e}")
+        pool.terminate()
