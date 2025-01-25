@@ -1,0 +1,453 @@
+{
+	"apiVersion": "1.3.6647",
+	"meta": {
+		"source": "https://programs.api.yle.fi/v3/schema/v3/packages/30-3120/extended-recommendations?offset=0&limit=16",
+		"offset": 0,
+		"limit": 16,
+		"count": 17,
+		"expires": "2025-01-24T09:54:41+02:00",
+		"cardOptionsTemplate": "coverStrip",
+		"analytics": {
+			"context": {
+				"comscore": {
+					"yle_referer": "radio.view.30-3120.hauskaa_seuraa.suositellut.untitled_list",
+					"yle_package_id": "30-3120"
+				}
+			}
+		}
+	},
+	"data": [{
+		"title": "PPP Podcast",
+		"description": "Poikelus, Pehkonen ja Parikka -parhaat",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-50647813"
+		},
+		"image": {
+			"id": "13-1-50647813-1692597248648",
+			"version": "1737381255"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-50647813.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Viki ja Köpi Podcast",
+		"description": "Viki ja Köpi Show'n viikon parhaat",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-50080410"
+		},
+		"image": {
+			"id": "13-1-50080410-1681371958723",
+			"version": "1736959580"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-50080410.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Sorvali & Stellan - päätapahtumia",
+		"description": "Aikuisten naisten kaveripodcast",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-71707460"
+		},
+		"image": {
+			"id": "13-1-71707460-1727263775408",
+			"version": "1736932171"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-71707460.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Olenko perseestä?",
+		"description": "Safe space kaikille perseilijöille",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-65705675"
+		},
+		"image": {
+			"id": "13-1-65705675-1682080705459",
+			"version": "1731308652"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-65705675.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Iltapäiväkahvit",
+		"description": "Kuppi kuumaa Vivin ja Ellan kanssa",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-65838703"
+		},
+		"image": {
+			"id": "13-1-65838703-1726478462533",
+			"version": "1731308590"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-65838703.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Vastakkain",
+		"description": "Kumpi ihmisryhmä on parempi?",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-71071062"
+		},
+		"image": {
+			"id": "13-1-71071062-1723618177149",
+			"version": "1731308602"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-71071062.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Onks kivaa olla sä?",
+		"description": "Tutustu ihmiseen artistin takana",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-70210923"
+		},
+		"image": {
+			"id": "13-1-70210923-1713163048426",
+			"version": "1731308652"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-70210923.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Crazians",
+		"description": "Aasiantuntijoiden yappailusessio",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-71181654"
+		},
+		"image": {
+			"id": "13-1-71181654-1718861559777",
+			"version": "1731308630"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-71181654.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "En sano mitään mutta outoa on",
+		"description": "Tekstiviestipalstojen aarteita",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-61933874"
+		},
+		"image": {
+			"id": "13-1-61933874-1646387200339",
+			"version": "1731308652"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-61933874.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Yhden yön juttuja",
+		"description": "Mitä mielessä pyörii kun pitäs jo nukkua",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-50250426"
+		},
+		"image": {
+			"id": "13-1-50250426-1662368679056",
+			"version": "1731308642"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-50250426.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Inttistoorit",
+		"description": "Tykeimmät armeijaläpät!",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-50725317"
+		},
+		"image": {
+			"id": "13-1-50725317-1703234061851",
+			"version": "1733138668"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-50725317.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Kaverin puolesta kyselen",
+		"description": "Noloja tarinoita ja varmat naurut",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-4415642"
+		},
+		"image": {
+			"id": "13-1-4415642-1598947418521",
+			"version": "1731308654"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-4415642.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Mikä keissi?",
+		"description": "Roisia läppää mummoista masturbaatioon",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-50626011"
+		},
+		"image": {
+			"id": "13-1-50626011-1603866781432",
+			"version": "1731308652"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-50626011.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Kohupodi",
+		"description": "Mitä musiikkikohuista jäi käteen?",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-50837780"
+		},
+		"image": {
+			"id": "13-1-50837780-1674112960186",
+			"version": "1731308655"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-50837780.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Arvaa mitä!",
+		"description": "Kiusallisia tarinoita nuorten arjesta",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-50735555"
+		},
+		"image": {
+			"id": "13-1-50735555-1622438382523",
+			"version": "1731308799"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-50735555.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}, {
+		"title": "Hauskaa maailmanloppua!",
+		"description": "Ekokriisi huumorihummuksella tarjoiltuna",
+		"pointer": {
+			"type": "series",
+			"uri": "yleareena://items/1-62937879"
+		},
+		"image": {
+			"id": "13-1-62937879-1686901149684",
+			"version": "1731308763"
+		},
+		"labels": [],
+		"presentation": "seriesCard",
+		"controls": [{
+			"type": "navigator",
+			"destination": {
+				"type": "player",
+				"uri": "https://areena.api.yle.fi/v1/ui/players/1-62937879.json?language=fi&v=10&client=yle-areena-web",
+				"authentication": ["yle-api"]
+			},
+			"tag": "play",
+			"icon": {
+				"id": "icon-play",
+				"version": "1730971077"
+			}
+		}],
+		"type": "card"
+	}],
+	"notifications": []
+}

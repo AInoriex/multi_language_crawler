@@ -1,0 +1,44 @@
+{
+    "ongoing_ondemand": {
+        "description": {
+            "fin": "Vieraana toimitusjohtaja Henrik Husman Nasdaq Helsingistä. Toimittajana Mikko Jylhä."
+        },
+        "subtitles": [],
+        "auto_subtitles": false,
+        "media_id": "78-c3e0d8a093c547f784a4ba9c6441b7c0",
+        "series": {
+            "id": "1-3725092",
+            "title": {
+                "fin": "Pörssipäivä"
+            }
+        },
+        "publication_id": "4-72758069",
+        "program_id": "1-72758068",
+        "dvr_window_in_seconds": 0,
+        "cuepoints": [],
+        "start_time": "2025-01-23T20:00:00.000+02:00",
+        "duration": {
+            "duration_in_seconds": 5215,
+            "h": 0,
+            "m": 0,
+            "s": 5215
+        },
+        "is_content_protected": false,
+        "title": {
+            "fin": "Miksi tulevat vuodet olisivat Helsingin pörssissä parempia, toimitusjohtaja Henrik Husman?"
+        },
+        "region": "World",
+        "content_type": "AudioObject",
+        "media_url": "https://yleawsaudioipv4.akamaized.net/aod/world/78-c3e0d8a093c547f784a4ba9c6441b7c0/audio-1737656122641.mp3?hdnts=exp=1737746407~acl=/aod/world/78-c3e0d8a093c547f784a4ba9c6441b7c0/*~hmac=bb9b8f2779e4aee4a68a8ef2a5a98c9bb62ce3e05a516af5ad8f0173e99f76d0",
+        "is_areena_visible": true,
+        "image": {
+            "id": "39-9190166215e3e227fa7",
+            "version": 1737468434
+        },
+        "service_id": "yle-areena",
+        "content_rating": {
+            "age_restriction": null,
+            "reasons": null
+        }
+    }
+}
