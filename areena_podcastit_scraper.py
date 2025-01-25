@@ -9,87 +9,84 @@ from os import getenv
 from utils.utime import get_time_stamp
 from utils.lark import alarm_lark_text, alarm
 from utils.logger import logger
+from utils.context import Context
 from database.crawler_audio_download_info import request_create_audio_api
-from handler.areena_podcastit import request_podcastit_list, parse_podcastit_list
+from handler.areena_podcastit import request_podcastit_list_api, request_podcastit_search_api, parse_podcastit_list
 from model.areena_podcastit import format_areena_audio_object
 
 SERVER_NAME = getenv("SERVER_NAME")
 ''' 服务名称 '''
 LIMIT_FAIL_COUNT = int(getenv("LIMIT_FAIL_COUNT"))
 ''' 处理失败任务限制数 '''
-
-def test():
-    # 请求播客列表接口
-    # response = request_podcastit_list(url="https://areena.api.yle.fi/v1/ui/content/list", page=1, page_size=16)
-    # parse_podcastit_list(response)
-
-    # 解析播客id
-    # print(get_areena_aid("yleareena://items/1-50647813"))
-    # print(get_areena_aid("https://areena.yle.fi/podcastit/1-72758069"))
-
-    # 格式化音频
-    # audio_obj = format_audio_object(task_id="test_task", audio_url="https://areena.yle.fi/podcastit/1-72758069", duration=230, language="fi", source_id="")
-
-    # 测试入库
-    # url = "%s?sign=%d" % (getenv("DATABASE_CREATE_API"), get_time_stamp())
-    # create_api = "%s?sign=%d" % ("https://magicmir.52ttyuyin.com/crawler_api/create_audio_record", get_time_stamp())
-    # request_create_audio_api(create_api, audio_obj)
-    pass
     
-def scrape_areena_podcastit_handler(task_id:str, page:int, page_size:int=16):
-    # 请求播客列表接口
-    response = request_podcastit_list(
-        url="https://areena.api.yle.fi/v1/ui/content/list",
-        page=page,
-        page_size=page_size,
-    )
+def scrape_areena_podcastit_handler(ctx:Context, scrape_mode:str="", page:int=1, _page_size:int=16):
+    if not scrape_mode or scrape_mode not in ["list", "search"]:
+        raise ValueError("请指定scrape_areena_podcastit_handler scrape_mode采集模式（list/search）")
+    if scrape_mode == "list":
+        # 请求播客列表接口
+        response = request_podcastit_list_api(
+            url="https://areena.api.yle.fi/v1/ui/content/list",
+            page=page,
+            page_size=_page_size,
+        )
+    elif scrape_mode == "search":
+        # 请求播客搜索接口
+        if ctx.get("query") is None:
+            raise ValueError("请指定scrape_areena_podcastit_handler搜索关键词")
+        response = request_podcastit_search_api(
+            url="https://areena.api.yle.fi/v1/ui/search",
+            query=ctx.get("query"),
+            page=page,
+            page_size=_page_size,
+        )
     for audio_url in parse_podcastit_list(response):
-        logger.debug(f"parse_podcastit_list > audio_url:{audio_url}")
-        # 解析播客id
-        # print(get_areena_aid("yleareena://items/1-50647813"))
-        # print(get_areena_aid("https://areena.yle.fi/podcastit/1-72758069"))
-
-        # 格式化音频
+        logger.debug(f"scrape_areena_podcastit_handler > parse audio_url:{audio_url}")
+        # 格式化数据
         audio_obj = format_areena_audio_object(
-            task_id=task_id,
+            task_id=ctx.get("task_id"),
             audio_url=audio_url,
             duration=0,
             language="fi",
             source_id="",
         )
 
-        # 入库
+        # 数据入库
         create_api = "%s?sign=%d" % (getenv("DATABASE_CREATE_API"), get_time_stamp())
         request_create_audio_api(create_api, audio_obj)
         sleep(0.5)
-        
 
-def main():
-    continue_fail_count = 0
-
-    # 任务id
-    task_id = str(uuid4())
-    page_st = 6
+def main(ctx:Context=None):
+    page_st = 1
     page_ed = 100000
-    page_size = 16
     # 遍历[page_st, page_ed)页
-    for page in range(page_st, page_ed):
+    for now_page in range(page_st, page_ed):
         try:
-            scrape_areena_podcastit_handler(task_id, page, page_size)
-            logger.success(f"scrape_areena_podcastit > page:{page} page_size:{page_size} 入库完毕")
+            logger.info(f"\nscrape_areena_podcastit > 任务ID:{ctx.get('task_id')} page:{now_page} 准备入库, Context:{str(ctx)}")
+            sleep(1)
+
+            # scrape_areena_podcastit_handler(task_id=task_id, mode="list", page=page)
+            scrape_areena_podcastit_handler(ctx, scrape_mode="search", page=now_page)
+
+            logger.success(f"\nscrape_areena_podcastit > 任务ID:{ctx.get('task_id')} page:{now_page} 入库完毕")
         except Exception as e:
-            err_text = f"【scrape_areena_podcastit】 采集失败, task_id:{task_id}, page:{page}, page_size:{page_size}, error:{e}"
+            err_text = f"【scrape_areena_podcastit】 采集失败, 任务ID:{ctx.get('task_id')}, 页数:{now_page}, error:{e}"
             logger.error(err_text)
-            continue_fail_count += 1
+            ctx.set("fail_count", ctx.get("fail_count") + 1)
             alarm(level="ERROR", text=err_text)
-            if continue_fail_count > LIMIT_FAIL_COUNT:
-                err_text = f"【scrape_areena_podcastit】 失败过多退出采集, server_name:{SERVER_NAME}, task_id:{task_id}"
+            if ctx.get("fail_count") > LIMIT_FAIL_COUNT:
+                err_text = f"【scrape_areena_podcastit】 采集完毕, SERVER_NAME:{SERVER_NAME}, Context:{str(ctx)}"
                 logger.error(err_text)
                 alarm(level="ERROR", text=err_text)
-                exit(1)
+                return
         finally:
-            sleep(20)
+            sleep(5)
 
 if __name__ == "__main__":
-    main()
-    # test()
+    ctx = Context()
+    ctx.set("task_id", str(uuid4()))
+    # 遍历所有两位字母关键字
+    # for query in ['aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj', 'ak', 'al', 'am', 'an', 'ao', 'ap', 'aq', 'ar', 'as', 'at', 'au', 'av', 'aw', 'ax', 'ay', 'az']:
+    for query in ['ba', 'bb', 'bc', 'bd', 'be', 'bf', 'bg', 'bh', 'bi', 'bj', 'bk', 'bl', 'bm', 'bn', 'bo', 'bp', 'bq', 'br', 'bs', 'bt', 'bu', 'bv', 'bw', 'bx', 'by', 'bz']:
+        ctx.set("query", query)
+        ctx.set("fail_count", 0)
+        main(ctx)

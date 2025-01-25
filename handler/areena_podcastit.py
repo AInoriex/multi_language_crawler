@@ -46,7 +46,7 @@ def get_address_location():
         {"country_code":"HK","continent":"AS","asnum":"202662","is_portability_region": false}
     '''
 
-def request_podcastit_media_info(url:str):
+def request_podcastit_preview_api(url:str):
     '''
     input: https://areena.yle.fi/podcastit/1-72758068
     request: https://player.api.yle.fi/v1/preview/1-72758068.json
@@ -94,11 +94,13 @@ def request_podcastit_media_info(url:str):
     }
     response = requests.get(url, headers=headers, cookies=cookies, params=params, proxies=_PROXIES)
 
-    print(f"request_podcastit_media_info > response.status_code: {response.status_code}")
-    print(f"request_podcastit_media_info > response.text: {response.text}")
+    print(f"request_podcastit_preview_api > response.status_code: {response.status_code}")
+    if response.status_code != 200:
+        raise requests.RequestException(f"request_podcastit_preview_api status_code: {response.status_code}")
+    print(f"request_podcastit_preview_api > response.text: {response.text}")
     return response
 
-def parse_podcastit_media_info(response:requests.Response):
+def parse_podcastit_preview(response:requests.Response):
     data_json = response.json()
     media_url = data_json["data"]["ongoing_ondemand"]["media_url"]
     media_info = data_json["data"]["ongoing_ondemand"]
@@ -112,7 +114,7 @@ def update_audio_with_media_info(audio:Audio, media_info:dict={}):
         try:
             audio.duration = media_info.get("duration").get("duration_in_seconds")
         except Exception as err:
-            logger.warning(f"update_audio_media_info > {audio.vid} get audio duraion failed, {err}")
+            logger.warning(f"update_audio_with_media_info > {audio.vid} get audio duraion failed, {err}")
 
         # audio.info
         result_dict = {}
@@ -129,11 +131,11 @@ def update_audio_with_media_info(audio:Audio, media_info:dict={}):
             audio=audio,
         )
     except Exception as e:
-        logger.warning(f"update_audio_media_info > {audio.vid} update failed, {e}")
+        logger.warning(f"update_audio_with_media_info > {audio.vid} update failed, {e}")
         return
 
-def request_podcastit_list(url:str="https://areena.api.yle.fi/v1/ui/content/list", page:int=1, page_size:int=16):
-    print(f"request_podcastit_list > params, url:{url} | page:{page} | page_size:{page_size}")
+def request_podcastit_list_api(url:str="https://areena.api.yle.fi/v1/ui/content/list", page:int=1, page_size:int=16):
+    print(f"request_podcastit_list_api > params url:{url} | page:{page} | page_size:{page_size}")
     headers = {
         "accept": "*/*",
         "accept-language": "zh-CN,zh;q=0.9",
@@ -183,19 +185,78 @@ def request_podcastit_list(url:str="https://areena.api.yle.fi/v1/ui/content/list
     # response = requests.get(url, headers=headers, cookies=cookies, params=params)
     response = requests.get(url, headers=headers, cookies=None, params=params, proxies=_PROXIES)
 
-    print(f"request_podcastit_list > response.status_code: {response.status_code}")
-    print(f"request_podcastit_list > response.text: {response.text}")
-    # dump_info(response.text, r"doc\request_podcastit_list-response_example.json")
+    print(f"request_podcastit_list_api > response.status_code: {response.status_code}")
+    if response.status_code != 200:
+        raise Exception(f"request_podcastit_list_api failed, status_code: {response.status_code}")
+    print(f"request_podcastit_list_api > response.text: {response.text}")
+    # dump_info(response.text, r"doc\request_podcastit_list_api-response_example.json")
+    return response
+
+def request_podcastit_search_api(query:str, url:str="https://areena.api.yle.fi/v1/ui/search", page:int=1, page_size:int=16):
+    print(f"request_podcastit_list_api > params query:{query} | url:{url} | page:{page} | page_size:{page_size}")
+    headers = {
+        "accept": "*/*",
+        "accept-language": "zh-CN,zh;q=0.9",
+        "cache-control": "no-cache",
+        "origin": "https://areena.yle.fi",
+        "pragma": "no-cache",
+        "priority": "u=1, i",
+        "referer": "https://areena.yle.fi/",
+        "sec-ch-ua": "\"Not)A;Brand\";v=\"99\", \"Google Chrome\";v=\"127\", \"Chromium\";v=\"127\"",
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": "\"Windows\"",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
+    }
+    cookies = {
+        "yle_selva": "17374443029914105106",
+        "userconsent": "v2|development|embedded_social_media",
+        "yle_rec": "1737444336098920023149",
+        "_cb": "gEHERDN5C8NBXgqzk",
+        "areena_ab": "aa0%2CpackageEAS1%2CpersonalCMF1%2CsimilarityRIEC1",
+        "AMCVS_3D717B335952EB220A495D55%40AdobeOrg": "1",
+        "s_cc": "true",
+        "_chartbeat2": ".1737444338045.1737784099758.10111.Baq4Cb9BfNcBU94_oCF0ZxGChIgpl.1",
+        "_cb_svref": "https%3A%2F%2Fareena.yle.fi%2Fhae%3Fq%3DKulttuurin%26service%3Dradio",
+        "AMCV_3D717B335952EB220A495D55%40AdobeOrg": "1585540135%7CMCMID%7C65600694663927198692694376961486283411%7CMCAAMLH-1738388900%7C7%7CMCAAMB-1738388900%7CRKhpRz8krg2tLO6pguXWp5olkAcUniQYPHaMWWgdJ3xzPWQmdj0y%7CMCOPTOUT-1737791300s%7CNONE%7CvVersion%7C4.4.0",
+        "_chartbeat4": "t=Clct3XCEMmKkDA9vFzCjmT0OB2ke6n&E=12&x=1600&c=0.21&y=3032&w=953"
+    }
+    # url = "https://areena.api.yle.fi/v1/ui/search"
+    params = {
+        "language": "fi",
+        "client": "yle-areena-web",
+        "v": "10",
+        "episodes": "true",
+        "packages": "true",
+        "query": "ac",
+        "service": "radio",
+        "offset": f"{(page-1)*page_size}",
+        "limit": f"{page_size}",
+        # "offset": "48",
+        # "limit": "16",
+        "country": "US",
+        "app_id": "areena-web-items",
+        "app_key": "wlTs5D9OjIdeS9krPzRQR4I1PYVzoazN"
+    }
+    response = requests.get(url, headers=headers, cookies=None, params=params, proxies=_PROXIES)
+
+    print(f"request_podcastit_search_api > response.status_code: {response.status_code}")
+    if response.status_code != 200:
+        raise requests.RequestException(f"request_podcastit_search_api status_code: {response.status_code}")
+    print(f"request_podcastit_search_api > response.text: {response.text}")
+    # dump_info(response.text, r"doc\request_podcastit_list_api-response_example.json")
     return response
 
 def parse_podcastit_list(response:requests.Response):
-    json_data = response.json()
-    # length = json_data["meta"]["count"]
-    length = len(json_data["data"])
+    data_json = response.json()
+    # length = data_json["meta"]["count"]
+    length = len(data_json["data"])
     print(f"parse_podcastit_list > 一共解析到{length}条数据")
     if length <= 0:
         raise ValueError("parse_podcastit_list解析无可用数据")
-    for data in json_data["data"]:
+    for data in data_json["data"]:
         try:
             uri = data.get("pointer", "").get("uri", "")
             if not uri:
@@ -214,9 +275,9 @@ def parse_podcastit_list(response:requests.Response):
 def areena_podcastit_download_handler(audio:Audio, save_path:str=""):
     if audio.source_link == "":
         raise ValueError("audio.source_link is empty")
-    resp = request_podcastit_media_info(audio.source_link)
+    resp = request_podcastit_preview_api(audio.source_link)
     logger.debug(f"areena_podcastit_download_handler > {audio.vid}请求{audio.source_link}成功")
-    download_url, media_info = parse_podcastit_media_info(resp)
+    download_url, media_info = parse_podcastit_preview(resp)
     logger.debug(f"areena_podcastit_download_handler > {audio.vid}解析{audio.source_link}成功")
     # 更新媒体信息
     if media_info:
@@ -238,13 +299,13 @@ if __name__ == "__main__":
 
     # 请求音频信息接口
     # https://player.api.yle.fi/v1/preview/ + 1-73010670 + .json?
-    # request_podcastit_media_info(url="https://player.api.yle.fi/v1/preview/1-73010670.json")
+    # request_podcastit_preview_api(url="https://player.api.yle.fi/v1/preview/1-73010670.json")
 
     # https://areena.yle.fi/podcastit/1-62939152 时长02:58 大小3.81MB
-    # request_podcastit_media_info(url="https://player.api.yle.fi/v1/preview/1-62939152.json")
+    # request_podcastit_preview_api(url="https://player.api.yle.fi/v1/preview/1-62939152.json")
     
     # https://areena.yle.fi/podcastit/1-72758068 时长02:58 大小3.81MB
-    # request_podcastit_media_info(url="https://player.api.yle.fi/v1/preview/1-72758068.json")
+    # request_podcastit_preview_api(url="https://player.api.yle.fi/v1/preview/1-72758068.json")
     '''
     {"meta":{"id":"1-72758068"},"data":{"ongoing_ondemand":{"description":{"fin":"Vieraana toimitusjohtaja Henrik Husman Nasdaq Helsingistä. Toimittajana Mikko Jylhä."},"subtitles":[],"auto_subtitles":false,"media_id":"78-c3e0d8a093c547f784a4ba9c6441b7c0","series":{"id":"1-3725092","title":{"fin":"Pörssipäivä"}},"publication_id":"4-72758069","program_id":"1-72758068","dvr_window_in_seconds":0,"cuepoints":[],"start_time":"2025-01-23T20:00:00.000+02:00","duration":{"duration_in_seconds":5215,"h":0,"m":0,"s":5215},"is_content_protected":false,"title":{"fin":"Miksi tulevat vuodet olisivat Helsingin pörssissä parempia, toimitusjohtaja Henrik Husman?"},"region":"World","content_type":"AudioObject","media_url":"https://yleawsaudioipv4.akamaized.net/aod/world/78-c3e0d8a093c547f784a4ba9c6441b7c0/audio-1737656122641.mp3?hdnts=exp=1737746407~acl=/aod/world/78-c3e0d8a093c547f784a4ba9c6441b7c0/*~hmac=bb9b8f2779e4aee4a68a8ef2a5a98c9bb62ce3e05a516af5ad8f0173e99f76d0","is_areena_visible":true,"image":{"id":"39-9190166215e3e227fa7","version":1737468434},"service_id":"yle-areena","content_rating":{"age_restriction":null,"reasons":null}}}}
     '''
@@ -258,4 +319,4 @@ if __name__ == "__main__":
     # )
 
     # 请求播客列表接口
-    # request_podcastit_list(url="https://areena.api.yle.fi/v1/ui/content/list", page=1, page_size=16)
+    # request_podcastit_list_api(url="https://areena.api.yle.fi/v1/ui/content/list", page=1, page_size=16)
