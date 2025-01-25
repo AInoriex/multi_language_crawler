@@ -9,15 +9,19 @@ class Context:
         self.__dict__['creat_time'] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     # 设置上下文
-    def set_ctx(self, key, value):
+    def set(self, key, value):
         self.__dict__[key] = value
 
     # 获取上下文
-    def get_ctx(self, key):
+    def get(self, key):
         return self.__dict__[key]
+
+    # 删除上下文
+    def delete(self, key):
+        del self.__dict__[key]
     
     # 判断key是否存在
-    def has_ctx(self, key):
+    def has(self, key):
         return key in self.__dict__
     
     # 遍历context所有key并写入文件
@@ -27,4 +31,8 @@ class Context:
             for k, v in self.__dict__.items():
                 f.writelines(f"{k}: {v}\n")
             f.writelines('\n\n')
+
+    # 列举context所有key-value
+    def __str__(self):
+        return str(self.__dict__)
     
