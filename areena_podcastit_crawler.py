@@ -96,8 +96,7 @@ def main_pipeline(pid):
             video_link = audio.source_link
             logger.info(f"Pipeline > 当前轮次: {download_round} | {run_count}, 进程 {pid} 处理任务 {audio_id} -- {video_link}")
             if audio.info not in [None, "", "{}"]:
-                info = json.loads(audio.info)
-                cloud_save_path = info.get("cloud_save_path", "")
+                cloud_save_path = audio.info.get("cloud_save_path", "")
             else:
                 cloud_save_path = ""
 
