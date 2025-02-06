@@ -1,7 +1,10 @@
+import json
 import time
 import random
+import requests
 from os import getenv
-from typing import List
+from utils.logger import logger
+from utils.utime import get_time_stamp
 
 TABLE_NAME = str("crawler_download_info")
 
@@ -37,9 +40,9 @@ class Video:
         source_link: str = "",
         duration: int = 0,
         language: str = "",
-        status=0,
-        lock=0,
-        info={},
+        status: int = 0,
+        lock: int = 0,
+        info: dict = {},
         source_id: str = "",
         comment: str = "",
     ):
@@ -82,6 +85,127 @@ class Video:
             "info": self.info,
             "source_id": self.source_id
         }
+    
+    # 更新info字段
+    def update_info(self, add_info:dict):
+        # if self.info in [None, "", "{}"]:
+        #     self.info = add_info
+        # else:
+        #     self_info = json.loads(self.info)
+        #     self.info = self_info | add_info # Python3.9+
+        self.info = self.info | add_info # Python3.9+
+
+    # 更新数据库
+    def update_db(self, db_url:str=getenv("DATABASE_VIDEO_UPDATE_API")):
+        """
+        update a video record in database with api
+
+        :param url: str, request api, default is `DATABASE_VIDEO_UPDATE_API`
+        :return: None
+        """
+        params = {
+            "sign": get_time_stamp()
+        }
+        reqbody = {
+            "id": self.id,
+            # "vid": self.vid,
+            "status": self.status,
+            "cloud_type": self.cloud_type,
+            "cloud_path": self.cloud_path,
+            "info": json.dumps(self.info),
+            "comment": self.comment,
+            "duration": self.duration,
+        }
+        logger.debug(f"update_db > update request | url:{db_url} params:{params} body:{reqbody}")
+        resp = requests.post(url=db_url, params=params, json=reqbody)
+        assert resp.status_code == 200
+        resp_json = resp.json()
+        logger.debug("update_db > update response | status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
+        if resp_json["code"] != 0:
+            raise Exception(f"update_db failed, req:{reqbody}, resp:{resp.status_code}|{str(resp.content, encoding='utf-8')}")
+        logger.info(f"update_db > update succeed, req:{reqbody}")
+
+    def insert_db(self, db_url:str=getenv("DATABASE_VIDEO_CREATE_API"), retry=3):
+        try:
+            params = {
+                "sign": get_time_stamp()
+            }
+            req = self.dict()
+            resp = requests.post(url=db_url, params=params, json=req, timeout=5, verify=True)
+            assert resp.status_code == 200
+            resp_json = resp.json()
+            logger.debug("insert_db > resp detail, status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
+            resp_code = resp_json.get("code")
+            if resp_code == 0:
+                logger.info(f"insert_db > 创建数据成功 vid:{req.get('vid')}, link:{req.get('source_link')}")
+            elif resp_code == 25000:
+                logger.info(f"insert_db > 资源存在, 跳过创建 status_code:{resp_json.get('code')}, content:{resp_json.get('msg')}")
+            else:
+                raise Exception(f"资源创建失败, req:{req}, resp:{str(resp.content, encoding='utf-8')}")
+        except Exception as e:
+            logger.error(f"insert_db > {db_url}入库处理失败: {e}")
+            if retry > 0:
+                logger.info(f"insert_db > 重新尝试入库, 剩余尝试次数: {retry}")
+                time.sleep(1)
+                return self.insert_db(db_url=db_url, retry=retry-1)
+            else:
+                logger.error(f"insert_db > {db_url}入库失败, 达到最大重试次数")
+                raise e
+
+def request_get_video_for_download_api(
+        url:str=getenv("DATABASE_VIDEO_GET_FOR_DOWNLOAD_API"),
+        query_id:int=0,
+        query_source_type:int=int(getenv("DOWNLOAD_SOURCE_TYPE")),
+        query_language:str=getenv("DOWNLOAD_LANGUAGE"),
+    )->Video|None:
+    """
+    get a video for downloading from api
+
+    :param url: str, request api, default is `DATABASE_VIDEO_GET_FOR_DOWNLOAD_API`
+    :param query_id: int, video id in database, default is 0 which means get a random video
+    :param query_source_type: int, source type of video, default is `DOWNLOAD_SOURCE_TYPE` in .env
+    :param query_language: str, language of video, default is `DOWNLOAD_LANGUAGE` in .env
+    :return: Video or None
+    """
+    try:
+        params = {
+            "sign": get_time_stamp(),
+            "id": query_id,
+            "source_type": query_source_type,
+            "language": query_language,
+            "limit": 1
+        }
+        # logger.debug(f"request_get_video_for_download_api > Get list Request | url:{url} params:{params}")
+        resp = requests.get(url=url, params=params)
+        # logger.debug(f"request_get_video_for_download_api > Get list Response | status_code:{resp.status_code}, content:{str(resp.content, encoding='utf-8')}")
+        assert resp.status_code == 200
+        resp_json = resp.json()
+        logger.debug(f"request_get_video_for_download_api > Get list Response detail | status_code:{resp_json['code']}, content:{resp_json['msg']}")
+        if len(resp_json["data"]["result"]) <= 0:
+            logger.warning("request_get_video_for_download_api > No video to download")
+            return None
+        resp_data:dict = resp_json["data"]["result"][0]
+        info_dict = json.loads(resp_data.get("info", "{}"))
+        video = Video(
+            id=resp_data.get("id", 0),
+            vid=resp_data.get("vid", ""),
+            position=resp_data.get("position", 0),
+            source_type=resp_data.get("source_type", 0),
+            source_link=resp_data.get("source_link", ""),
+            duration=resp_data.get("duration", 0),
+            cloud_type=resp_data.get("cloud_type", 0),
+            cloud_path=resp_data.get("cloud_path", ""),
+            language=resp_data.get("language", ""),
+            status=resp_data.get("status", 0),
+            lock=resp_data.get("lock", 0),
+            info=info_dict,
+            comment=resp_data.get("comment", "")
+        )
+        return video
+    except Exception as e:
+        logger.error(f"request_get_video_for_download_api > get video failed, url:{url}, req:{params}, error: {e}")
+        return None
+
 
 if __name__ == "__main__":
     # Example Usage
