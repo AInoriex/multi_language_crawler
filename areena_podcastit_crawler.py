@@ -55,12 +55,12 @@ def crawler_sleep(is_succ:bool, run_count:int, download_round:int):
     now_round = run_count//LIMIT_LAST_COUNT + 1
     if now_round > download_round:
         print(f"[INFO] > 触发轮数限制, 当前轮数：{now_round}")
-        random_sleep(rand_st=60, rand_range=30)
+        random_sleep(rand_st=30, rand_range=30)
         return
     if is_succ:
-        random_sleep(rand_st=10, rand_range=10)
+        random_sleep(rand_st=5, rand_range=5)
     else:
-        random_sleep(rand_st=30, rand_range=20)
+        random_sleep(rand_st=10, rand_range=10)
 
 def download_handler(audio, save_path:str):
     from handler.areena_podcastit import areena_podcastit_download_handler

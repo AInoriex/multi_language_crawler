@@ -100,7 +100,7 @@ def request_podcastit_preview_api(url:str):
     print(f"request_podcastit_preview_api > response.text: {response.text}")
     return response
 
-def parse_podcastit_preview(response:requests.Response):
+def parse_podcastit_preview_response(response:requests.Response):
     data_json = response.json()
     media_url = data_json["data"]["ongoing_ondemand"]["media_url"]
     media_info = data_json["data"]["ongoing_ondemand"]
@@ -134,7 +134,7 @@ def update_audio_with_media_info(audio:Audio, media_info:dict={}):
         logger.warning(f"update_audio_with_media_info > {audio.vid} update failed, {e}")
         return
 
-def request_podcastit_list_api(url:str="https://areena.api.yle.fi/v1/ui/content/list", page:int=1, page_size:int=16):
+def request_podcastit_list_api(url:str="https://areena.api.yle.fi/v1/ui/content/list", page:int=1, page_size:int=16, token=""):
     print(f"request_podcastit_list_api > params url:{url} | page:{page} | page_size:{page_size}")
     headers = {
         "accept": "*/*",
@@ -171,9 +171,8 @@ def request_podcastit_list_api(url:str="https://areena.api.yle.fi/v1/ui/content/
         "client": "yle-areena-web",
         "language": "fi",
         "v": "10",
-        # "token": "eyJhbGciOiJIUzI1NiJ9.eyJjYXJkT3B0aW9uc1RlbXBsYXRlIjoiY292ZXJTdHJpcCIsInNvdXJjZSI6Imh0dHBzOi8vcHJvZ3JhbXMuYXBpLnlsZS5maS92My9zY2hlbWEvdjMvcGFja2FnZXMvMzAtMzEyMC9leHRlbmRlZC1yZWNvbW1lbmRhdGlvbnMiLCJhbmFseXRpY3MiOnsiY29udGV4dCI6eyJjb21zY29yZSI6eyJ5bGVfcmVmZXJlciI6InJhZGlvLnZpZXcuMzAtMzEyMC5oYXVza2FhX3NldXJhYS5zdW9zaXRlbGx1dC51bnRpdGxlZF9saXN0IiwieWxlX3BhY2thZ2VfaWQiOiIzMC0zMTIwIn19fX0.zBravrISAJfCNkMFiu3-AtgSOV75kFopeAYnZqNk88U",
-        # "token": "eyJhbGciOiJIUzI1NiJ9.eyJjYXJkT3B0aW9uc1RlbXBsYXRlIjoiY292ZXJTdHJpcCIsInNvdXJjZSI6Imh0dHBzOi8vcHJvZ3JhbXMuYXBpLnlsZS5maS92My9zY2hlbWEvdjMvcGFja2FnZXMvMzAtMzEyMC9wb3B1bGFyP2VwaXNvZGVzX2FzX3Nlcmllcz1mYWxzZSIsImFuYWx5dGljcyI6eyJjb250ZXh0Ijp7ImNvbXNjb3JlIjp7InlsZV9yZWZlcmVyIjoicmFkaW8udmlldy4zMC0zMTIwLmhhdXNrYWFfc2V1cmFhLnN1b3NpdHVpbW1hdC51bnRpdGxlZF9saXN0IiwieWxlX3BhY2thZ2VfaWQiOiIzMC0zMTIwIn19fX0.1U4hjZKoe5dop0Ibws7UbYc1Vhl3V0XRhYKIvuzcH1Y",
-        "token": "eyJhbGciOiJIUzI1NiJ9.eyJjYXJkT3B0aW9uc1RlbXBsYXRlIjoiY292ZXJTdHJpcCIsInNvdXJjZSI6Imh0dHBzOi8vcHJvZ3JhbXMuYXBpLnlsZS5maS92My9zY2hlbWEvdjMvcGFja2FnZXMvMzAtMTUwL2xhdGVzdCIsImFuYWx5dGljcyI6eyJjb250ZXh0Ijp7ImNvbXNjb3JlIjp7InlsZV9yZWZlcmVyIjoicmFkaW8udmlldy4zMC0xNTAuYWphbmtvaHRhaXN0YS5kZWZhdWx0X3RhYi51bnRpdGxlZF9saXN0IiwieWxlX3BhY2thZ2VfaWQiOiIzMC0xNTAifX19fQ.Zd4KlluOqEBLOUAjIwW12rQVbhFVR-Rn_0Nh0ZvLetc",
+        # "token": "eyJhbGciOiJIUzI1NiJ9.eyJjYXJkT3B0aW9uc1RlbXBsYXRlIjoiY292ZXJTdHJpcCIsInNvdXJjZSI6Imh0dHBzOi8vcHJvZ3JhbXMuYXBpLnlsZS5maS92My9zY2hlbWEvdjMvcGFja2FnZXMvMzAtMTQ0L2xhdGVzdCIsImFuYWx5dGljcyI6eyJjb250ZXh0Ijp7ImNvbXNjb3JlIjp7InlsZV9yZWZlcmVyIjoicmFkaW8udmlldy41Ny01Mmx2OWFWbjAua3VsdHR1dXJpLnV1c2ltbWF0LnVudGl0bGVkX2xpc3QiLCJ5bGVfcGFja2FnZV9pZCI6IjMwLTE0NCJ9fX19.mYLkKH4JwpA2BlU0s1l9i5FFlWL-7pj8SuIEN1x8KLg",
+        "token": token,
         "offset": f"{(page-1)*page_size}",
         "limit": f"{page_size}",
         # "offset": "0",
@@ -193,7 +192,7 @@ def request_podcastit_list_api(url:str="https://areena.api.yle.fi/v1/ui/content/
     return response
 
 def request_podcastit_search_api(query:str, url:str="https://areena.api.yle.fi/v1/ui/search", page:int=1, page_size:int=16):
-    print(f"request_podcastit_list_api > params query:{query} | url:{url} | page:{page} | page_size:{page_size}")
+    print(f"request_podcastit_search_api > params query:{query} | url:{url} | page:{page} | page_size:{page_size}")
     headers = {
         "accept": "*/*",
         "accept-language": "zh-CN,zh;q=0.9",
@@ -249,13 +248,13 @@ def request_podcastit_search_api(query:str, url:str="https://areena.api.yle.fi/v
     # dump_info(response.text, r"doc\request_podcastit_list_api-response_example.json")
     return response
 
-def parse_podcastit_list(response:requests.Response):
+def parse_podcastit_list_response(response:requests.Response):
     data_json = response.json()
     # length = data_json["meta"]["count"]
     length = len(data_json["data"])
-    print(f"parse_podcastit_list > 一共解析到{length}条数据")
+    print(f"parse_podcastit_list_response > 一共解析到{length}条数据")
     if length <= 0:
-        raise ValueError("parse_podcastit_list解析无可用数据")
+        raise ValueError("parse_podcastit_list_response解析无可用数据")
     for data in data_json["data"]:
         try:
             uri = data.get("pointer", "").get("uri", "")
@@ -264,7 +263,7 @@ def parse_podcastit_list(response:requests.Response):
             podcast_id = uri.split("yleareena://items/")[1]
             podcast_url = f"https://areena.yle.fi/podcastit/{podcast_id}"
         except Exception as e:
-            notice_text = f"parse_podcastit_list > 解析失败:{e}, data:{data}"
+            notice_text = f"parse_podcastit_list_response > 解析失败:{e}, data:{data}"
             logger.error(notice_text)
             alarm(level="error", text=notice_text)
         else:
@@ -277,7 +276,7 @@ def areena_podcastit_download_handler(audio:Audio, save_path:str=""):
         raise ValueError("audio.source_link is empty")
     resp = request_podcastit_preview_api(audio.source_link)
     logger.debug(f"areena_podcastit_download_handler > {audio.vid}请求{audio.source_link}成功")
-    download_url, media_info = parse_podcastit_preview(resp)
+    download_url, media_info = parse_podcastit_preview_response(resp)
     logger.debug(f"areena_podcastit_download_handler > {audio.vid}解析{audio.source_link}成功")
     # 更新媒体信息
     if media_info:
