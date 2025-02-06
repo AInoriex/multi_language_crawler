@@ -14,7 +14,7 @@ from utils.file import get_file_size
 from utils.lark import alarm_lark_text
 from utils.ip import get_local_ip, get_public_ip
 from database.crawler_audio_download_info import request_update_audio_api, request_get_audio_for_download_api
-from handler.crawler_common import get_cloud_save_path_by_language
+from handler.common import get_cloud_save_path_by_language
 
 LOCAL_IP = get_local_ip()
 ''' 本地IP '''
@@ -71,14 +71,14 @@ def download_handler(audio, save_path:str):
 
 def main_pipeline(pid):
     sleep(15 * pid)
-    logger.debug(f"Pipeline > 进程 {pid} 开始执行")
+    logger.info(f"Pipeline > 进程 {pid} 开始执行")
 
     download_round = int(1)      # 当前下载轮数
     run_count = int(0)           # 持续处理的任务个数l
     continue_fail_count = int(0) # 连续失败的任务个数
     while True:
         audio = request_get_audio_for_download_api(
-            url="%s?sign=%d"%(getenv("DATABASE_GET_API"), get_time_stamp()),
+            url="%s?sign=%d"%(getenv("DATABASE_AUDIO_GET_API"), get_time_stamp()),
             query_source_type=int(getenv("DOWNLOAD_SOURCE_TYPE")),
             query_language=getenv("DOWNLOAD_LANGUAGE"),
         )
@@ -135,7 +135,7 @@ def main_pipeline(pid):
             audio.cloud_type = 2 if CLOUD_TYPE == "obs" else 1 # 1:cos 2:obs
             audio.cloud_path = cloud_link
             request_update_audio_api(
-                url="%s?sign=%d"%(getenv("DATABASE_UPDATE_API"), get_time_stamp()), 
+                url="%s?sign=%d"%(getenv("DATABASE_AUDIO_UPDATE_API"), get_time_stamp()), 
                 audio=audio,
             )
             logger.success(f"Pipeline > 进程 {pid} 处理任务 {audio_id} 更新数据库完成")
@@ -170,7 +170,7 @@ def main_pipeline(pid):
             # 任务回调
             audio.lock = 0
             request_update_audio_api(
-                url="%s?sign=%d"%(getenv("DATABASE_UPDATE_API"), get_time_stamp()), 
+                url="%s?sign=%d"%(getenv("DATABASE_AUDIO_UPDATE_API"), get_time_stamp()), 
                 audio=audio,
             )
             raise KeyboardInterrupt
@@ -185,7 +185,7 @@ def main_pipeline(pid):
             audio.lock = 0
             audio.comment += f'<div class="download_pipeline">pipeline error:{e}, error_time:{get_now_time_string()}</div>'
             request_update_audio_api(
-                url="%s?sign=%d"%(getenv("DATABASE_UPDATE_API"), get_time_stamp()), 
+                url="%s?sign=%d"%(getenv("DATABASE_AUDIO_UPDATE_API"), get_time_stamp()), 
                 audio=audio,
             )
             # 告警
