@@ -44,3 +44,25 @@ def format_second_to_time_string(sec=0.0) -> str:
         if seconds > 0:
             time_str += f"{seconds:.2f}秒"
         return time_str
+
+def compare_time1_to_time2(time1:str, time2:str):
+    ''' 判断time1是否大于time2 '''
+    from datetime import datetime
+    import pytz
+    try:
+        # 将输入的时间字符串转换为datetime对象
+        if time1 == "now":
+            time_1 = datetime.now(pytz.timezone("UTC"))
+        else:
+            time_1 = datetime.fromisoformat(time1)
+        if time2 == "now":
+            time_2 = datetime.now(pytz.timezone("UTC"))
+        else:
+            time_2 = datetime.fromisoformat(time2)
+        if time_1 > time_2:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"compare_time1_to_time2 error, {e}")
+        return False
