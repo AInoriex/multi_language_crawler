@@ -22,10 +22,10 @@ class Video:
         language: 视频主要语言
         cloud_type: 云存储类型
         cloud_path: 云存储的路径
-        result_path: 处理结果路径
         status: 0: 已爬取, 1: 本地已下载, 2: 已上传云端未处理, 3: 已处理未上传, 4: 已处理已上传, -1 失败
         lock: 处理锁, 0: 未锁定, 1: 锁定
         info: meta数据, json格式
+        source_id: 来源id
         comment: 备注
     """
 
@@ -83,7 +83,8 @@ class Video:
             "status": self.status,
             "lock": self.lock,
             "info": self.info,
-            "source_id": self.source_id
+            "source_id": self.source_id,
+            "comment": self.comment,
         }
     
     # 更新info字段
@@ -96,52 +97,71 @@ class Video:
         self.info = self.info | add_info # Python3.9+
 
     # 更新数据库
-    def update_db(self, db_url:str=getenv("DATABASE_VIDEO_UPDATE_API")):
+    def update_db(self, db_url:str=getenv("DATABASE_VIDEO_UPDATE_API"), force_update:bool=False,retry=3):
         """
-        update a video record in database with api
+        update the video record in database with api
 
-        :param url: str, request api, default is `DATABASE_VIDEO_UPDATE_API`
+        :param db_url: str, request api, default is `DATABASE_VIDEO_UPDATE_API`
+        :param force_update: bool, force update, default is False
+        :param retry: int, retry times, default is 3
         :return: None
         """
-        params = {
-            "sign": get_time_stamp()
-        }
-        reqbody = {
-            "id": self.id,
-            # "vid": self.vid,
-            "status": self.status,
-            "cloud_type": self.cloud_type,
-            "cloud_path": self.cloud_path,
-            "info": json.dumps(self.info),
-            "comment": self.comment,
-            "duration": self.duration,
-        }
-        logger.debug(f"update_db > update request | url:{db_url} params:{params} body:{reqbody}")
-        resp = requests.post(url=db_url, params=params, json=reqbody)
-        assert resp.status_code == 200
-        resp_json = resp.json()
-        logger.debug("update_db > update response | status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
-        if resp_json["code"] != 0:
-            raise Exception(f"update_db failed, req:{reqbody}, resp:{resp.status_code}|{str(resp.content, encoding='utf-8')}")
-        logger.info(f"update_db > update succeed, req:{reqbody}")
-
-    def insert_db(self, db_url:str=getenv("DATABASE_VIDEO_CREATE_API"), retry=3):
         try:
             params = {
                 "sign": get_time_stamp()
             }
-            req = self.dict()
-            resp = requests.post(url=db_url, params=params, json=req, timeout=5, verify=True)
+            reqbody = {
+                "id": self.id,
+                # "vid": self.vid,
+                "status": self.status,
+                "cloud_type": self.cloud_type,
+                "cloud_path": self.cloud_path,
+                "info": json.dumps(self.info),
+                "comment": self.comment,
+                "duration": self.duration,
+            }
+            logger.debug(f"update_db > update request | url:{db_url} params:{params} body:{reqbody}")
+            resp = requests.post(url=db_url, params=params, json=reqbody)
+            assert resp.status_code == 200
+            resp_json = resp.json()
+            logger.debug("update_db > update response | status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
+            if resp_json["code"] != 0:
+                raise Exception(f"update_db failed, reqbody:{reqbody}, resp:{resp.status_code}|{str(resp.content, encoding='utf-8')}")
+            logger.info(f"update_db > update id:{self.id} succeed")
+        except Exception as e:
+            logger.error(f"update_db > update id:{self.id} failed, error:{e}")
+            if retry > 0:
+                logger.info(f"update_db > 重新尝试请求, 剩余尝试次数: {retry}")
+                self.update_db(db_url=db_url, retry=retry-1)
+            else:
+                logger.error(f"update_db > {db_url}更新失败, 达到最大重试次数, params:{params}, reqbody:{reqbody}")
+                if force_update:
+                    raise Exception(f"update_db video failed, {e}")
+
+    def insert_db(self, db_url:str=getenv("DATABASE_VIDEO_CREATE_API"), retry:int=3):
+        """
+        insert the audio record in database with api
+
+        :param db_url: str, request api, default is `DATABASE_AUDIO_CREATE_API`
+        :param retry: int, retry times, default is 3
+        :return: None
+        """
+        try:
+            params = {
+                "sign": get_time_stamp()
+            }
+            reqbody = self.dict()
+            resp = requests.post(url=db_url, params=params, json=reqbody, timeout=5, verify=True)
             assert resp.status_code == 200
             resp_json = resp.json()
             logger.debug("insert_db > resp detail, status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
             resp_code = resp_json.get("code")
             if resp_code == 0:
-                logger.info(f"insert_db > 创建数据成功 vid:{req.get('vid')}, link:{req.get('source_link')}")
+                logger.info(f"insert_db > 创建视频成功 vid:{reqbody.get('vid')}, link:{reqbody.get('source_link')}")
             elif resp_code == 25000:
-                logger.info(f"insert_db > 资源存在, 跳过创建 status_code:{resp_json.get('code')}, content:{resp_json.get('msg')}")
+                logger.info(f"insert_db > 视频存在, 跳过创建 status_code:{resp_json.get('code')}, content:{resp_json.get('msg')}")
             else:
-                raise Exception(f"资源创建失败, req:{req}, resp:{str(resp.content, encoding='utf-8')}")
+                raise Exception(f"视频创建失败, reqbody:{reqbody}, resp:{str(resp.content, encoding='utf-8')}")
         except Exception as e:
             logger.error(f"insert_db > {db_url}入库处理失败: {e}")
             if retry > 0:
@@ -149,11 +169,11 @@ class Video:
                 time.sleep(1)
                 return self.insert_db(db_url=db_url, retry=retry-1)
             else:
-                logger.error(f"insert_db > {db_url}入库失败, 达到最大重试次数")
-                raise e
+                logger.error(f"insert_db > {db_url}入库失败, 达到最大重试次数, params:{params}, reqbody:{reqbody}")
+                raise Exception(f"insert_db audio failed, {e}")
 
 def request_get_video_for_download_api(
-        url:str=getenv("DATABASE_VIDEO_GET_FOR_DOWNLOAD_API"),
+        url:str=getenv("DATABASE_VIDEO_GET_API"),
         query_id:int=0,
         query_source_type:int=int(getenv("DOWNLOAD_SOURCE_TYPE")),
         query_language:str=getenv("DOWNLOAD_LANGUAGE"),
@@ -161,7 +181,7 @@ def request_get_video_for_download_api(
     """
     get a video for downloading from api
 
-    :param url: str, request api, default is `DATABASE_VIDEO_GET_FOR_DOWNLOAD_API`
+    :param url: str, request api, default is `DATABASE_VIDEO_GET_API`
     :param query_id: int, video id in database, default is 0 which means get a random video
     :param query_source_type: int, source type of video, default is `DOWNLOAD_SOURCE_TYPE` in .env
     :param query_language: str, language of video, default is `DOWNLOAD_LANGUAGE` in .env
@@ -185,7 +205,8 @@ def request_get_video_for_download_api(
             logger.warning("request_get_video_for_download_api > No video to download")
             return None
         resp_data:dict = resp_json["data"]["result"][0]
-        info_dict = json.loads(resp_data.get("info", "{}"))
+        info_str = resp_data.get("info", "")
+        info_dict = json.loads("{}" if info_str in ['', None] else info_str)
         video = Video(
             id=resp_data.get("id", 0),
             vid=resp_data.get("vid", ""),
@@ -203,25 +224,5 @@ def request_get_video_for_download_api(
         )
         return video
     except Exception as e:
-        logger.error(f"request_get_video_for_download_api > get video failed, url:{url}, req:{params}, error: {e}")
+        logger.error(f"request_get_video_for_download_api > get video failed, url:{url}, reqbody:{params}, error: {e}")
         return None
-
-
-if __name__ == "__main__":
-    # Example Usage
-    video_obj = Video(
-        vid="VID12345",
-        position=1,
-        source_type=1,
-        source_link="https://www.youtube.com/watch?v=12345",
-        duration=100,
-        cloud_type=2,
-        cloud_path="/cloud/path/to/video",
-        language="en",
-        status=0,
-        lock=0,
-        info='{"key": "value"}',
-        source_id="UCgdiE5jT-77eUMLXn66NLCQ"
-    )
-    print(video_obj)
-    pass

@@ -6,7 +6,7 @@ from os import getenv
 from utils.logger import logger
 from utils.utime import get_time_stamp
 
-TABLE_NAME = str("crawler_download_info")
+TABLE_NAME = str("crawler_audio_download_info")
 
 class Audio:
     """
@@ -22,10 +22,10 @@ class Audio:
         language: 音频主要语言
         cloud_type: 云存储类型
         cloud_path: 云存储的路径
-        result_path: 处理结果路径
         status: 0: 已爬取, 1: 本地已下载, 2: 已上传云端未处理, 3: 已处理未上传, 4: 已处理已上传, -1 失败
         lock: 处理锁, 0: 未锁定, 1: 锁定
         info: meta数据, json格式
+        source_id: 来源id
         comment: 备注
     """
 
@@ -40,9 +40,9 @@ class Audio:
         source_link: str = "",
         duration: int = 0,
         language: str = "",
-        status=0,
-        lock=0,
-        info={},
+        status: int =0,
+        lock: int =0,
+        info: dict = {},
         source_id: str = "",
         comment: str = "",
     ):
@@ -97,34 +97,80 @@ class Audio:
         self.info = self.info | add_info # Python3.9+
 
     # 更新数据库
-    def update_db(self, db_url:str=getenv("DATABASE_AUDIO_UPDATE_API")):
+    def update_db(self, db_url:str=getenv("DATABASE_AUDIO_UPDATE_API"), force_update:bool=False, retry:int=3):
         """
-        update a audio record in database with api
+        update the audio record in database with api
 
-        :param db_url: str, request api, default is `DATABASE_VIDEO_UPDATE_API`
+        :param db_url: str, request api, default is `DATABASE_AUDIO_UPDATE_API`
+        :param force_update: bool, force update, default is False
+        :param retry: int, retry times, default is 3
         :return: None
         """
-        params = {
-            "sign": get_time_stamp()
-        }
-        reqbody = {
-            "id": self.id,
-            # "vid": self.vid,
-            "status": self.status,
-            "cloud_type": self.cloud_type,
-            "cloud_path": self.cloud_path,
-            "info": json.loads(self.info),
-            "comment": self.comment,
-            "duration": self.duration,
-        }
-        logger.debug(f"update_db > update request | url:{db_url} params:{params} body:{reqbody}")
-        resp = requests.post(url=db_url, params=params, json=reqbody)
-        assert resp.status_code == 200
-        resp_json = resp.json()
-        logger.debug("update_db > update response | status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
-        if resp_json["code"] != 0:
-            raise Exception(f"update_db failed, req:{reqbody}, resp:{resp.status_code}|{str(resp.content, encoding='utf-8')}")
-        logger.info(f"update_db > update succeed, req:{reqbody}")
+        try:
+            params = {
+                "sign": get_time_stamp()
+            }
+            reqbody = {
+                "id": self.id,
+                # "vid": self.vid,
+                "status": self.status,
+                "cloud_type": self.cloud_type,
+                "cloud_path": self.cloud_path,
+                "info": json.dumps(self.info),
+                "comment": self.comment,
+                "duration": self.duration,
+            }
+            logger.debug(f"update_db > update request | url:{db_url} params:{params} body:{reqbody}")
+            resp = requests.post(url=db_url, params=params, json=reqbody)
+            assert resp.status_code == 200
+            resp_json = resp.json()
+            logger.debug("update_db > update response | status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
+            if resp_json["code"] != 0:
+                raise Exception(f"update_db failed, reqbody:{reqbody}, resp:{resp.status_code}|{str(resp.content, encoding='utf-8')}")
+            logger.info(f"update_db > update id:{self.id} succeed")
+        except Exception as e:
+            logger.error(f"update_db > update id:{self.id} failed, error:{e}")
+            if retry > 0:
+                logger.info(f"update_db > 重新尝试请求, 剩余尝试次数: {retry}")
+                self.update_db(db_url=db_url, retry=retry-1)
+            else:
+                logger.error(f"update_db > {db_url}更新失败, 达到最大重试次数, params:{params}, reqbody:{reqbody}")
+                if force_update:
+                    raise Exception(f"update_db audio failed, {e}")
+
+    def insert_db(self, db_url:str=getenv("DATABASE_AUDIO_CREATE_API"), retry:int=3):
+        """
+        insert the audio record in database with api
+
+        :param db_url: str, request api, default is `DATABASE_AUDIO_CREATE_API`
+        :param retry: int, retry times, default is 3
+        :return: None
+        """
+        try:
+            params = {
+                "sign": get_time_stamp()
+            }
+            reqbody = self.dict()
+            resp = requests.post(url=db_url, params=params, json=reqbody, timeout=5, verify=True)
+            assert resp.status_code == 200
+            resp_json = resp.json()
+            logger.debug("insert_db > resp detail, status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
+            resp_code = resp_json.get("code")
+            if resp_code == 0:
+                logger.info(f"insert_db > 创建音频成功 vid:{reqbody.get('vid')}, link:{reqbody.get('source_link')}")
+            elif resp_code == 25000:
+                logger.info(f"insert_db > 音频存在, 跳过创建 status_code:{resp_json.get('code')}, content:{resp_json.get('msg')}")
+            else:
+                raise Exception(f"音频创建失败, reqbody:{reqbody}, resp:{str(resp.content, encoding='utf-8')}")
+        except Exception as e:
+            logger.error(f"insert_db > {db_url}入库处理失败: {e}")
+            if retry > 0:
+                logger.info(f"insert_db > 重新尝试请求, 剩余尝试次数: {retry}")
+                time.sleep(1)
+                return self.insert_db(db_url=db_url, retry=retry-1)
+            else:
+                logger.error(f"insert_db > {db_url}入库失败, 达到最大重试次数, params:{params}, reqbody:{reqbody}")
+                raise Exception(f"insert_db audio failed, {e}")
 
 def request_create_audio_api(url:str, audio:Audio, retry:int=3):
     ''' 调用crawler_audio_download_info数据库接口创建音频记录 '''
@@ -132,18 +178,18 @@ def request_create_audio_api(url:str, audio:Audio, retry:int=3):
         params = {
             "sign": get_time_stamp()
         }
-        req = audio.dict()
-        resp = requests.post(url=url, params=params, json=req, timeout=5, verify=True)
+        reqbody = audio.dict()
+        resp = requests.post(url=url, params=params, json=reqbody, timeout=5, verify=True)
         assert resp.status_code == 200
         resp_json = resp.json()
         logger.debug("request_create_audio_api > resp detail, status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
         resp_code = resp_json.get("code")
         if resp_code == 0:
-            logger.info(f"request_create_audio_api > 创建数据成功 vid:{req.get('vid')}, link:{req.get('source_link')}")
+            logger.info(f"request_create_audio_api > 创建数据成功 vid:{reqbody.get('vid')}, link:{reqbody.get('source_link')}")
         elif resp_code == 25000:
             logger.info(f"request_create_audio_api > 资源存在, 跳过创建 status_code:{resp_json.get('code')}, content:{resp_json.get('msg')}")
         else:
-            raise Exception(f"资源创建失败, req:{req}, resp:{str(resp.content, encoding='utf-8')}")
+            raise Exception(f"资源创建失败, reqbody:{reqbody}, resp:{str(resp.content, encoding='utf-8')}")
     except Exception as e:
         logger.error(f"request_create_audio_api > {url}入库处理失败: {e}")
         if retry > 0:
@@ -155,7 +201,7 @@ def request_create_audio_api(url:str, audio:Audio, retry:int=3):
             raise e
 
 def request_get_audio_for_download_api(
-        url:str=getenv("DATABASE_AUDIO_GET_FOR_DOWNLOAD_API"),
+        url:str=getenv("DATABASE_AUDIO_GET_API"),
         query_id:int=0,
         query_source_type:int=int(getenv("DOWNLOAD_SOURCE_TYPE")),
         query_language:str=getenv("DOWNLOAD_LANGUAGE"),
@@ -163,7 +209,7 @@ def request_get_audio_for_download_api(
     """
     get a audio for downloading from api
 
-    :param url: str, request api, default is `DATABASE_AUDIO_GET_FOR_DOWNLOAD_API`
+    :param url: str, request api, default is `DATABASE_AUDIO_GET_API`
     :param query_id: int, audio id in database, default is 0 which means get a random audio
     :param query_source_type: int, source type of audio, default is `DOWNLOAD_SOURCE_TYPE` in .env
     :param query_language: str, language of audio, default is `DOWNLOAD_LANGUAGE` in .env
@@ -187,7 +233,8 @@ def request_get_audio_for_download_api(
             logger.warning("request_get_audio_for_download_api > No audio to download")
             return None
         resp_data:dict = resp_json["data"]["result"][0]
-        info_dict = json.loads(resp_data.get("info", "{}"))
+        info_str = resp_data.get("info", "")
+        info_dict = json.loads("{}" if info_str in ['', None] else info_str)
         audio = Audio(
             id=resp_data.get("id", 0),
             vid=resp_data.get("vid", ""),
@@ -205,7 +252,7 @@ def request_get_audio_for_download_api(
         )
         return audio
     except Exception as e:
-        logger.error(f"request_get_audio_for_download_api > get audio failed, url:{url}, req:{params}, error: {e}")
+        logger.error(f"request_get_audio_for_download_api > get audio failed, url:{url}, reqbody:{params}, error: {e}")
         return None
 
 def request_update_audio_api(url:str, audio:Audio):
@@ -235,26 +282,6 @@ def request_update_audio_api(url:str, audio:Audio):
     resp_json = resp.json()
     # logger.debug("request_update_audio_api > update response | status_code:%d, content:%s"%(resp_json["code"], resp_json["msg"]))
     if resp_json["code"] != 0:
-        raise Exception(f"request_update_audio_api failed, req:{reqbody}, resp:{resp.status_code}|{str(resp.content, encoding='utf-8')}")
+        raise Exception(f"request_update_audio_api failed, reqbody:{reqbody}, resp:{resp.status_code}|{str(resp.content, encoding='utf-8')}")
     else:
-        logger.info(f"request_update_audio_api > update succeed, req:{reqbody}")
-
-
-if __name__ == "__main__":
-    # Example Usage
-    audio_obj = Audio(
-        vid="VID12345",
-        position=1,
-        source_type=1,
-        source_link="https://www.youtube.com/watch?v=12345",
-        duration=100,
-        cloud_type=2,
-        cloud_path="/cloud/path/to/audio",
-        language="en",
-        status=0,
-        lock=0,
-        info='{"key": "value"}',
-        source_id="UCgdiE5jT-77eUMLXn66NLCQ"
-    )
-    print(audio_obj)
-    pass
+        logger.info(f"request_update_audio_api > update succeed, reqbody:{reqbody}")
