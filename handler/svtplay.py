@@ -1,13 +1,14 @@
-import json
 from os import getenv, path 
 import requests
 from database.crawler_download_info import Video
-from handler.yt_dlp import download_video
+from database.crawler_audio_download_info import Audio
+from handler.yt_dlp import download_video, download_audio
+from model.svtplay import get_video_id
 from utils.logger import logger
 
 _PROXIES = {'http': getenv("HTTP_PROXY"),'https': getenv("HTTP_PROXY")} if getenv("HTTP_PROXY", "") != "" else None
 
-def extract_video_id(url:str):
+def get_video_id(url:str):
     ''' 使用正则表达式匹配 URL 中的特定部分
     exp. https://www.svtplay.se/video/j16gBxm/vanmakt -> j16gBxm
     '''
@@ -22,7 +23,7 @@ def request_video_info_api(url:str):
     # https://www.svtplay.se/video/jNgQ3XK/varldens-starkaste-bella
     # https://www.svtplay.se/video/8opYX4N/dokument-utifran-inuti-krigets-ryssland
     try:
-        vid = extract_video_id(url)
+        vid = get_video_id(url)
         headers = {
             "accept": "*/*",
             "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
@@ -45,7 +46,7 @@ def request_video_info_api(url:str):
         print(f"request_video_info_api > response.status_code: {response.status_code}")
         if response.status_code != 200:
             raise Exception(f"request_video_info_api failed, status_code: {response.status_code}")
-        print(f"request_video_info_api > response.text: {response.text}")
+        # print(f"request_video_info_api > response.text: {response.text}")
         # dump_info(response.text, r"doc\request_video_info_api-response_example.json")
         return response
         
@@ -104,12 +105,18 @@ def svtplay_video_download_handler(video:Video, save_path:str=""):
     # 下载视频文件
     if video.source_link == "":
         raise ValueError("video.source_link is empty")
-    download_url = video.source_link
-    if download_url == "":
-        raise ValueError("download_url is empty")
     filename = path.join(save_path, f"{video.vid}.mp4")
-    download_path = download_video(download_url, filename)
+    download_path = download_video(video.source_link, filename)
     logger.debug(f"svtplay_video_download_handler > {video.vid}下载{video.source_link}成功, download_path:{download_path}")
+    return download_path
+
+def svtplay_audio_download_handler(audio:Audio, save_path:str=""):
+    # 下载音频文件
+    if audio.source_link == "":
+        raise ValueError("audio.source_link is empty")
+    filename = path.join(save_path, f"{audio.vid}.m4a")
+    download_path = download_audio(audio.source_link, filename)
+    logger.debug(f"svtplay_audio_download_handler > {audio.vid}下载{audio.source_link}成功, download_path:{download_path}")
     return download_path
 
 def svtplay_video_meta_handler(video:Video):
@@ -118,12 +125,25 @@ def svtplay_video_meta_handler(video:Video):
         raise ValueError("video.source_link is empty")
     resp = request_video_info_api(video.source_link)
     logger.debug(f"svtplay_video_meta_handler > {video.vid}请求{video.source_link}成功")
-    video_info = parse_video_info_response(resp)
+    meta = parse_video_info_response(resp)
     logger.debug(f"svtplay_video_meta_handler > {video.vid}解析{video.source_link}成功")
-    video.duration = video_info["contentDuration"]
-    video.update_info(video_info)
+    video.duration = meta["contentDuration"]
+    video.update_info(meta)
     video.update_db()
     logger.debug(f"svtplay_video_meta_handler > {video.vid}更新媒体信息成功")
+
+def svtplay_audio_meta_handler(audio:Audio):
+    # 更新媒体信息
+    if audio.source_link == "":
+        raise ValueError("audio.source_link is empty")
+    resp = request_video_info_api(audio.source_link)
+    logger.debug(f"svtplay_audio_meta_handler > {audio.vid}请求{audio.source_link}成功")
+    meta = parse_video_info_response(resp)
+    logger.debug(f"svtplay_audio_meta_handler > {audio.vid}解析{audio.source_link}成功")
+    audio.duration = meta["contentDuration"]
+    audio.update_info(meta)
+    audio.update_db()
+    logger.debug(f"svtplay_audio_meta_handler > {audio.vid}更新媒体信息成功")
 
 def request_svtplay_kategori_page(url:str):
     try:
@@ -185,49 +205,23 @@ def parse_svtplay_kategori_page(html:str):
     """
     parser = etree.HTMLParser()
     tree = etree.fromstring(html, parser)
-    # 查找所有data-css-selector="contentItemLink"的元素
-    elements = tree.xpath('//a[@data-css-selector="contentItemLink"]')
+    origin_hrefs = []
     # 提取href值
-    hrefs = [element.get('href') for element in elements]
+    # elements_1 = tree.xpath('//a[@data-css-selector="contentItemLink"]')
+    # origin_hrefs += [element.get('href') for element in elements_1]
+    # elements_2 = tree.xpath('//a[@data-rt="associated-header-link"]')
+    # origin_hrefs += [element.get('href') for element in elements_2]
+    elements_a = tree.xpath('//a')
+    origin_hrefs += [element.get('href') for element in elements_a]
     # print(hrefs)
     # 清洗href
     res_hrefs = []
-    for href in hrefs:
+    for href in origin_hrefs:
         ele = href.split("/")
-        if len(ele) == 4 and ele[1] == "video":
+        if len(ele) >= 4 and ele[1] == "video":
             res_hrefs.append(href)
     # print(res_hrefs)
     return res_hrefs
-
-def format_svtplay_video_object(task_id:str, video_url:str, duration:int=0, language:str="sv", source_id:str="")->Video:
-    ''' 格式化信息为数据库入库对象
-    :param video_url: 视频URL eg: https://www.youtube.com/watch?v=XYjL_pXK8V8
-    :param duration: 时长
-    :param language: 语言
-    :param task_id: 任务id
-    :param source_id: 来源id
-    :return: Video
-    '''
-    vid = f"svt_{extract_video_id(video_url)}"
-    info_dict ={}
-    info_dict['cloud_save_path'] = "/QUWAN_DATA/language/Ruidianyu/svtplay/"
-    info_dict['task_id'] = task_id
-    info = json.dumps(info_dict)
-
-    # TODO 改造yaml读取
-    video_obj = Video(
-        id=int(0),
-        vid=vid,
-        position=int(3),
-        source_type=int(14),
-        source_link=str(video_url),
-        language=str(language),
-        duration=int(duration),
-        info=info,
-        source_id=source_id
-    )
-    logger.debug(f"format_svtplay_video_object > {video_obj}")
-    return video_obj
 
 if __name__ == '__main__':
     request_video_info_api("https://www.svtplay.se/video/jNgQ3XK/varldens-starkaste-bella")

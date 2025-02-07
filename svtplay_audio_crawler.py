@@ -13,7 +13,7 @@ from utils.utime import random_sleep, get_now_time_string, format_second_to_time
 from utils.file import get_file_size
 from utils.lark import alarm_lark_text
 from utils.ip import get_local_ip, get_public_ip
-from database.crawler_download_info import request_get_video_for_download_api
+from database.crawler_audio_download_info import request_get_audio_for_download_api
 from handler.common import get_cloud_save_path_by_language
 
 LOCAL_IP = get_local_ip()
@@ -62,17 +62,17 @@ def crawler_sleep(is_succ:bool, run_count:int, download_round:int):
     else:
         random_sleep(rand_st=10, rand_range=10)
 
-def svtplay_video_handler(video, save_path:str):
-    from handler.svtplay import svtplay_video_download_handler, svtplay_video_meta_handler
+def svtplay_audio_handler(audio, save_path:str):
+    from handler.svtplay import svtplay_audio_download_handler, svtplay_audio_meta_handler
     try:
-        svtplay_video_meta_handler(video)
+        svtplay_audio_meta_handler(audio)
     except Exception as e:
-        logger.warning(f"svtplay_video_handler 更新meta信息失败, {e}")
+        logger.warning(f"svtplay_audio_handler 更新meta信息失败, {e}")
     else:
-        logger.info(f"svtplay_video_handler 更新meta信息成功")
-    download_path = svtplay_video_download_handler(video, save_path)
+        logger.info(f"svtplay_audio_handler 更新meta信息成功")
+    download_path = svtplay_audio_download_handler(audio, save_path)
     if download_path == "":
-        raise ValueError("svtplay_video_handler get empty download file")
+        raise ValueError("svtplay_audio_handler get empty download file")
     return download_path
 
 def main_pipeline(pid):
@@ -80,44 +80,44 @@ def main_pipeline(pid):
     logger.info(f"Pipeline > 进程 {pid} 开始执行")
 
     download_round = int(1)      # 当前下载轮数
-    run_count = int(0)           # 持续处理的任务个数l
+    run_count = int(0)           # 持续处理的任务个数
     continue_fail_count = int(0) # 连续失败的任务个数
     while True:
-        video = request_get_video_for_download_api(
-            url=getenv("DATABASE_VIDEO_GET_API"),
+        audio = request_get_audio_for_download_api(
+            url=getenv("DATABASE_AUDIO_GET_API"),
             query_source_type=int(getenv("DOWNLOAD_SOURCE_TYPE")),
             query_language=getenv("DOWNLOAD_LANGUAGE"),
         )
-        if video is None:
+        if audio is None:
             logger.warning(f"Pipeline > 当前轮次: {download_round} | {run_count}, 进程 {pid} 无任务待处理, 等待中...")
             random_sleep(rand_st=20, rand_range=10)
             continue
-        if video.id <= 0 or video.source_link == "":
+        if audio.id <= 0 or audio.source_link == "":
             logger.warning(f"Pipeline > 当前轮次: {download_round} | {run_count}, 进程 {pid} 获取无效任务, 跳过处理...")
             random_sleep(rand_st=20, rand_range=10)
             continue
         try:
             run_count += 1
-            audio_id = video.id
-            video_link = video.source_link
-            logger.info(f"Pipeline > 当前轮次: {download_round} | {run_count}, 进程 {pid} 处理任务 {audio_id} -- {video_link}")
-            if video.info:
-                cloud_save_path = video.info.get("cloud_save_path", "")
+            audio_id = audio.id
+            audio_link = audio.source_link
+            logger.info(f"Pipeline > 当前轮次: {download_round} | {run_count}, 进程 {pid} 处理任务 {audio_id} -- {audio_link}")
+            if audio.info:
+                cloud_save_path = audio.info.get("cloud_save_path", "")
             else:
                 cloud_save_path = ""
 
             # 下载
             time_1 = time()
-            download_path = svtplay_video_handler(video, DOWNLOAD_PATH)
+            download_path = svtplay_audio_handler(audio, DOWNLOAD_PATH)
             spend_download_time = max(time() - time_1, 0.01) #下载花费时间
-            logger.success(f"Pipeline > 进程 {pid} 处理任务 {audio_id} 下载完成, from: {video_link}, to: {download_path}")
+            logger.success(f"Pipeline > 进程 {pid} 处理任务 {audio_id} 下载完成, from: {audio_link}, to: {download_path}")
             
             # 上传云端
             time_2 = time()
             cloud_path = urljoin(
                 get_cloud_save_path_by_language(
                     save_path=cloud_save_path if cloud_save_path !='' else getenv("CLOUD_SAVE_PATH"),
-                    lang_key=video.language
+                    lang_key=audio.language
                 ), 
                 path.basename(download_path)
             )
@@ -136,10 +136,10 @@ def main_pipeline(pid):
             logger.success(f"Pipeline > 进程 {pid} 处理任务 {audio_id} 上传完成, from: {download_path}, to: {cloud_link}")
             
             # 更新数据库
-            video.status = 2 # 2:已上传云端
-            video.cloud_type = 2 if CLOUD_TYPE == "obs" else 1 # 1:cos 2:obs
-            video.cloud_path = cloud_link
-            video.update_db()
+            audio.status = 2 # 2:已上传云端
+            audio.cloud_type = 2 if CLOUD_TYPE == "obs" else 1 # 1:cos 2:obs
+            audio.cloud_path = cloud_link
+            audio.update_db()
             logger.success(f"Pipeline > 进程 {pid} 处理任务 {audio_id} 更新数据库完成")
             
             # 日志记录
@@ -157,8 +157,8 @@ def main_pipeline(pid):
             notice_text = f"[Svtplay Crawler] download pipeline success. \
                 \n\t下载服务: {SERVER_NAME} | 进程: {pid} \
                 \n\t下载信息: 轮数 {download_round} | 处理总数 {run_count} | 连续失败数 {continue_fail_count} \
-                \n\t资源信息: {video.id} | {video.vid} | {video.language} \
-                \n\tLink: {video.source_link} -> {video.cloud_path} \
+                \n\t资源信息: {audio.id} | {audio.vid} | {audio.language} \
+                \n\tLink: {audio.source_link} -> {audio.cloud_path} \
                 \n\t资源共 {file_size:.2f}MB , 共处理了{format_second_to_time_string(spend_total_time)} \
                 \n\t下载时长: {format_second_to_time_string(spend_download_time)} , 上传时长: {format_second_to_time_string(spend_upload_time)} \
                 \n\t下载均速: {file_size/spend_download_time:.2f}M/s , 上传均速: {file_size/spend_upload_time:.2f}M/s \
@@ -170,24 +170,24 @@ def main_pipeline(pid):
         except KeyboardInterrupt:
             logger.warning(f"Pipeline > 进程 {pid} interrupted processing {audio_id}, reverting...")
             # 任务回调
-            video.lock = 0
-            video.update_db()
+            audio.lock = 0
+            audio.update_db()
             raise KeyboardInterrupt
         except Exception as e:
             continue_fail_count += 1
             time_fail = time()
             logger.error(f"Pipeline > 进程 {pid} 处理任务 {audio_id} 失败, 错误信息:{e}")
             # 任务回调
-            video.status = -1
-            video.lock = 0
-            video.comment += f'<div class="svtplay_crawler">pipeline error:{e}, error_time:{get_now_time_string()}</div>'
-            video.update_db()
+            audio.status = -1
+            audio.lock = 0
+            audio.comment += f'<div class="svtplay_crawler">pipeline error:{e}, error_time:{get_now_time_string()}</div>'
+            audio.update_db()
             # 告警
             notice_text = f"[Svtplay Crawler | ERROR] download pipeline failed. \
                 \n\t下载服务: {SERVER_NAME} | {pid} \
                 \n\t下载信息: 轮数 {download_round} | 处理总数 {run_count} | 连续失败数 {continue_fail_count}\
-                \n\t资源信息: {video.id} | {video.vid} | {video.language} \
-                \n\tSource Link: {video.source_link} \
+                \n\t资源信息: {audio.id} | {audio.vid} | {audio.language} \
+                \n\tSource Link: {audio.source_link} \
                 \n\t共处理了{format_second_to_time_string(int(time_fail-time_1))} \
                 \n\tIP: {LOCAL_IP} | {get_public_ip()} \
                 \n\tError: {e} \
