@@ -133,10 +133,7 @@ def main_pipeline(pid):
             audio.status = 2 # 2:已上传云端
             audio.cloud_type = 2 if CLOUD_TYPE == "obs" else 1 # 1:cos 2:obs
             audio.cloud_path = cloud_link
-            request_update_audio_api(
-                url="%s?sign=%d"%(getenv("DATABASE_AUDIO_UPDATE_API"), get_time_stamp()), 
-                audio=audio,
-            )
+            audio.update_db(force_update=True)
             logger.success(f"Pipeline > 进程 {pid} 处理任务 {audio_id} 更新数据库完成")
             
             # 日志记录
@@ -167,11 +164,9 @@ def main_pipeline(pid):
         except KeyboardInterrupt:
             logger.warning(f"Pipeline > 进程 {pid} interrupted processing {audio_id}, reverting...")
             # 任务回调
+            audio.status = 0
             audio.lock = 0
-            request_update_audio_api(
-                url="%s?sign=%d"%(getenv("DATABASE_AUDIO_UPDATE_API"), get_time_stamp()), 
-                audio=audio,
-            )
+            audio.update_db()
             raise KeyboardInterrupt
         # except BrokenPipeError as e: # 账号被封处理
         #     return
@@ -183,10 +178,7 @@ def main_pipeline(pid):
             audio.status = -1
             audio.lock = 0
             audio.comment += f'<div class="download_pipeline">pipeline error:{e}, error_time:{get_now_time_string()}</div>'
-            request_update_audio_api(
-                url="%s?sign=%d"%(getenv("DATABASE_AUDIO_UPDATE_API"), get_time_stamp()), 
-                audio=audio,
-            )
+            audio.update_db(force_update=True)
             # 告警
             notice_text = f"[Podcastit Crawler | ERROR] download pipeline failed. \
                 \n\t下载服务: {SERVER_NAME} | {pid} \

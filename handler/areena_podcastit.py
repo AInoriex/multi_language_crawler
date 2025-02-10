@@ -126,10 +126,7 @@ def update_audio_with_media_info(audio:Audio, media_info:dict={}):
         audio.info = json.dumps(result_dict)
 
         # update
-        request_update_audio_api(
-            url="%s?sign=%d"%(getenv("DATABASE_AUDIO_UPDATE_API"), get_time_stamp()), 
-            audio=audio,
-        )
+        audio.update_db()
     except Exception as e:
         logger.warning(f"update_audio_with_media_info > {audio.vid} update failed, {e}")
         return

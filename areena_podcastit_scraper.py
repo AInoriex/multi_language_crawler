@@ -52,8 +52,7 @@ def scrape_areena_podcastit_handler(ctx:Context, scrape_mode:str="", page:int=1,
         )
 
         # 数据入库
-        create_api = "%s?sign=%d" % (getenv("DATABASE_AUDIO_CREATE_API"), get_time_stamp())
-        request_create_audio_api(create_api, audio_obj)
+        audio_obj.insert_db()
         sleep(0.5)
 
 def main(ctx:Context=None):
